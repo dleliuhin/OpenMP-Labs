@@ -1,0 +1,4 @@
+# Qt build temporary files and folders
+build*
+*.pro.*
+*.txt.*
