@@ -31,7 +31,7 @@ int main( int argc, char **argv )
 {
     QCoreApplication qapp( argc, argv );
 
-    static auto key_count = 0;
+    auto key_count = 0;
 
     //-----------------------------------------------------------------------------------
 
