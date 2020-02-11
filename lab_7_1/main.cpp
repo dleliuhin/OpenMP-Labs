@@ -20,15 +20,15 @@
 
 #include <omp.h>
 
+static constexpr auto N = 5;
+
 //=======================================================================================
 int main( int argc, char **argv )
 {
     QCoreApplication qapp( argc, argv );
 
-    static constexpr auto N = 5;
-
     double x[N], y[N];
-    x[0] = 0;
+    x[0] = 1;
 
 #pragma omp parallel for ordered
     for ( auto i = 1; i < N; i++ )
