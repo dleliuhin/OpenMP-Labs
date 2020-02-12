@@ -21,6 +21,8 @@ int main( int argc, char **argv )
 
     //-----------------------------------------------------------------------------------
 
+    QMap<int, bool> decision;
+
     auto qargs = qapp.arguments();
 
     if ( !qargs.contains( "-c" ) )
@@ -41,17 +43,15 @@ int main( int argc, char **argv )
     auto chars = qts.readAll();
     chars.chop(1);
 
-    qDebug() << chars.contains( QRegExp("[a-z,A-Z]") );
-
-    if ( chars.contains( "^\-+" ) )
-        qCritical() << "It's a negative number!";
-
     conf_file.close();
+
+    if ( chars.contains( QRegExp("[a-z,A-Z,-/+]") ) )
+        qCritical() << "Wrong number!";
 
     QList<int> number;
 
-//    foreach ( const auto& ch, chars )
-//        number.append( ch.toInt() );
+    for ( const auto& ch: chars )
+        number.append( ch.unicode() );
 
     qDebug() << "Chars: " << chars;
     qDebug() << "Number: " << number;
