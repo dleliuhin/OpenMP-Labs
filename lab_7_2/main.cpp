@@ -51,80 +51,62 @@ int main( int argc, char **argv )
 
     QList<int> numbers;
 
-    for ( const auto& ch: chars.toUtf8() )
-        numbers.append( ch - '0' );
+    if ( chars.size() > 1 )
+        for ( const auto& ch: chars.toUtf8() )
+            numbers.append( ch - '0' );
+    else
+        numbers.append( chars.toInt() );
 
     qDebug() << "Chars: " << chars;
     qDebug() << "Number: " << numbers;
 
-    //-----------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
 
-#pragma omp parallel sections num_threads(3)
-    {
-        //--------------------------------------------------------------------------------
+    // Check divisibility by 2
 
-        // Check divisibility by 2
-
-#pragma omp section
-        {
 #pragma omp parallel if ( numbers.last() % 2 == 0 )
-            if ( omp_in_parallel() )
-            {
-                decision[2] = true;
-            }
-            else
-            {
-                decision[2] = false;
-            }
-        }
+    if ( omp_in_parallel() )
+        //#pragma omp single
+        decision[2] = true;
+    else
+        decision[2] = false;
 
-        //--------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
 
-        // Check divisibility by 5
+    // Check divisibility by 5
 
-#pragma omp section
-        {
 #pragma omp parallel if ( numbers.last() % 5 == 0 )
-            if ( omp_in_parallel() )
-            {
-                decision[5] = true;
-            }
-            else
-            {
-                decision[5] = false;
-            }
-        }
+    if ( omp_in_parallel() )
+        //#pragma omp single
+        decision[5] = true;
+    else
+        decision[5] = false;
 
-        //--------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
 
-        // Check divisibility by 10
+    // Check divisibility by 10
 
-#pragma omp section
-        {
 #pragma omp parallel if ( numbers.last() == 0 )
-            if ( omp_in_parallel() )
-            {
-#pragma omp single
-                decision[10] = true;
-            }
-            else
-            {
-                decision[10] = false;
-            }
-        }
-    }
+    if ( omp_in_parallel() )
+        //#pragma omp single
+        decision[10] = true;
+    else
+        decision[10] = false;
 
     //-----------------------------------------------------------------------------------
 
     int sum = 0;
 
-    omp_set_num_threads( numbers.size() );
-#pragma omp parallel
+#pragma omp parallel if ( numbers.size() > 1 )
+    if ( omp_in_parallel() )
     {
-#pragma omp for reduction( +: sum ) // Можно и #pragma omp atomic
+        omp_set_num_threads( numbers.size() );
+#pragma omp parallel for reduction( +: sum ) // Можно и #pragma omp atomic
         for ( int i = 0; i < numbers.size(); i++ )
             sum += numbers.at(i);
-    }
+   }
+    else
+        sum += numbers.first();
 
     //-----------------------------------------------------------------------------------
 
@@ -132,14 +114,10 @@ int main( int argc, char **argv )
 
 #pragma omp parallel if ( sum % 3 == 0 )
     if ( omp_in_parallel() )
-    {
 #pragma omp single
         decision[3] = true;
-    }
     else
-    {
         decision[3] = false;
-    }
 
     //-----------------------------------------------------------------------------------
 
@@ -147,21 +125,82 @@ int main( int argc, char **argv )
 
 #pragma omp parallel if ( sum % 9 == 0 )
     if ( omp_in_parallel() )
-    {
 #pragma omp single
         decision[9] = true;
-    }
     else
-    {
         decision[9] = false;
-    }
+
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 6
+
+#pragma omp parallel if ( decision.value(2) && decision.value(3) )
+    if ( omp_in_parallel() )
+        decision[6] = true;
+    else
+        decision[6] = false;
 
     //-----------------------------------------------------------------------------------
 
     // Check divisibility by 4
 
-    sum = 0;
+#pragma omp parallel if ( ( ( numbers.size() == 1 ) && ( numbers.first() % 4 == 0 )) || \
+    ( numbers.size() > 1 && \
+    ( ( ( numbers.last() == 0 ) && ( *( numbers.end() - 2 ) == 0 ) ) || \
+    ( ( ( numbers.last() + 2 * ( *( numbers.end() - 2 ) ) ) % 4 == 0 ) ) ) ) )
+    if ( omp_in_parallel() )
+        decision[4] = true;
+    else
+        decision[4] = false;
 
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 7
+
+#pragma omp parallel if ( ( ( numbers.size() == 1 ) && ( numbers.last() % 7 == 0 ) ) || \
+    ( ( numbers.size() > 1 ) && \
+    ( ( numbers.last() + 3 * ( *( numbers.end() - 2 ) ) ) % 7 == 0 ) ) )
+    if ( omp_in_parallel() )
+        decision[7] = true;
+    else
+        decision[7] = false;
+
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 8
+
+#pragma omp parallel if ( ( numbers.size() == 1 ) && ( numbers.last() % 8 == 0 ) )
+    if ( omp_in_parallel() )
+        decision[8] = true;
+    else
+        decision[8] = false;
+
+#pragma omp parallel if ( numbers.size() == 2 )
+    if ( omp_in_parallel() )
+    {
+        QString tmp;
+        tmp.append( chars.at(0) );
+        tmp.append( chars.at(1) );
+
+        auto val = tmp.toInt();
+
+        if ( val % 8 == 0 )
+            decision[8] = true;
+    }
+
+#pragma omp parallel if ( numbers.size() > 2 )
+    if ( omp_in_parallel() )
+    {
+        QString tmp;
+        tmp.append( *( chars.end() - 3 ) );
+        tmp.append( *( chars.end() - 2 ) );
+        tmp.append( *( chars.end() - 1 ) );
+
+        auto val = tmp.toInt();
+
+        if ( val % 8 == 0 )
+            decision[8] = true;
+    }
 
     //-----------------------------------------------------------------------------------
 
