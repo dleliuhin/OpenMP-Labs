@@ -84,7 +84,7 @@ int main( int argc, char **argv )
 
     omp_set_num_threads( qCeil( words.size() / qreal( params.words_per_thread ) ) );
 
-#pragma omp parallel reduction( + : key_count )
+#pragma omp parallel reduction( +: key_count )
     {
         auto thr_num = omp_get_thread_num();
 

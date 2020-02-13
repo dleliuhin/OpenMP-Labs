@@ -21,7 +21,7 @@ int main( int argc, char **argv )
 
     //-----------------------------------------------------------------------------------
 
-    QMap<int, bool> decision;
+    static QMap<int, bool> decision;
 
     auto qargs = qapp.arguments();
 
@@ -45,19 +45,132 @@ int main( int argc, char **argv )
 
     conf_file.close();
 
-    if ( chars.contains( QRegExp("[a-z,A-Z,-/+]") ) )
-        qCritical() << "Wrong number!";
+    Q_ASSERT( !chars.contains( QRegExp("[a-z,A-Z,-/+]") ) );
+    Q_ASSERT( !chars.isEmpty() );
+    Q_ASSERT( !( chars.size() > 1000 ) );
 
-    QList<int> number;
+    QList<int> numbers;
 
-    for ( const auto& ch: chars )
-        number.append( ch.unicode() );
+    for ( const auto& ch: chars.toUtf8() )
+        numbers.append( ch - '0' );
 
     qDebug() << "Chars: " << chars;
-    qDebug() << "Number: " << number;
+    qDebug() << "Number: " << numbers;
 
     //-----------------------------------------------------------------------------------
 
-    return qapp.exec();
+#pragma omp parallel sections num_threads(3)
+    {
+        //--------------------------------------------------------------------------------
+
+        // Check divisibility by 2
+
+#pragma omp section
+        {
+#pragma omp parallel if ( numbers.last() % 2 == 0 )
+            if ( omp_in_parallel() )
+            {
+                decision[2] = true;
+            }
+            else
+            {
+                decision[2] = false;
+            }
+        }
+
+        //--------------------------------------------------------------------------------
+
+        // Check divisibility by 5
+
+#pragma omp section
+        {
+#pragma omp parallel if ( numbers.last() % 5 == 0 )
+            if ( omp_in_parallel() )
+            {
+                decision[5] = true;
+            }
+            else
+            {
+                decision[5] = false;
+            }
+        }
+
+        //--------------------------------------------------------------------------------
+
+        // Check divisibility by 10
+
+#pragma omp section
+        {
+#pragma omp parallel if ( numbers.last() == 0 )
+            if ( omp_in_parallel() )
+            {
+#pragma omp single
+                decision[10] = true;
+            }
+            else
+            {
+                decision[10] = false;
+            }
+        }
+    }
+
+    //-----------------------------------------------------------------------------------
+
+    int sum = 0;
+
+    omp_set_num_threads( numbers.size() );
+#pragma omp parallel
+    {
+#pragma omp for reduction( +: sum ) // Можно и #pragma omp atomic
+        for ( int i = 0; i < numbers.size(); i++ )
+            sum += numbers.at(i);
+    }
+
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 3
+
+#pragma omp parallel if ( sum % 3 == 0 )
+    if ( omp_in_parallel() )
+    {
+#pragma omp single
+        decision[3] = true;
+    }
+    else
+    {
+        decision[3] = false;
+    }
+
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 9
+
+#pragma omp parallel if ( sum % 9 == 0 )
+    if ( omp_in_parallel() )
+    {
+#pragma omp single
+        decision[9] = true;
+    }
+    else
+    {
+        decision[9] = false;
+    }
+
+    //-----------------------------------------------------------------------------------
+
+    // Check divisibility by 4
+
+    sum = 0;
+
+
+    //-----------------------------------------------------------------------------------
+
+    for ( const auto& key: decision.keys() )
+        if ( decision.value( key ) )
+            qDebug() << "The number can divised by " << key;
+        else
+            qDebug() << "The number cannot divised by " << key;
+
+    return 0;
 }
 //=======================================================================================
